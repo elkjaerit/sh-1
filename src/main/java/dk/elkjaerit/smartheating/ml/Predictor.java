@@ -55,7 +55,7 @@ public class Predictor {
       return build.getResult();
     } catch (Exception e) {
       LOG.log(Level.SEVERE, "Could not make prediction for room " + room.getName(), e);
-      return Label.NEGATIVE;
+      return Label.POSITIVE;
     }
   }
 
