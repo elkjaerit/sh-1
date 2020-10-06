@@ -1,7 +1,7 @@
  ```
 gcloud functions deploy sensor-consumer --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.Consumer --runtime java11 --trigger-topic=my-topic --allow-unauthenticated
 gcloud functions deploy power-unit-scheduling --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.PowerUnitUpdateFunction --runtime java11 --trigger-topic=power-unit-scheduler
-adju
+gcloud functions deploy weather-scheduling --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.WeatherUpdaterFunction --runtime java11 --trigger-topic=weather-scheduler
 ```
  
  

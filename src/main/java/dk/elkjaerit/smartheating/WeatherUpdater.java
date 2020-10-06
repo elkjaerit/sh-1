@@ -1,7 +1,9 @@
 package dk.elkjaerit.smartheating;
 
+import dk.elkjaerit.smartheating.ml.Predictor;
 import dk.elkjaerit.smartheating.model.Building;
 import dk.elkjaerit.smartheating.model.DigitalOutput;
+import dk.elkjaerit.smartheating.model.PredictionOverview;
 import dk.elkjaerit.smartheating.model.Room;
 import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
 import dk.elkjaerit.smartheating.weather.WeatherForecast;
@@ -61,6 +63,10 @@ public class WeatherUpdater {
     }
 
     room.getDigitalOutput().updatePower(adjustedForNight);
+
+    PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
+
+    LOGGER.info("Prediction: " + room.getName() + ": " + predictedLabel);
 
     LOGGER.info("Power for room: " + room.getDigitalOutput().getPower());
   }

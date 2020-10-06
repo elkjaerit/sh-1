@@ -3,18 +3,23 @@ package dk.elkjaerit.smartheating.ml;
 import com.google.cloud.bigquery.*;
 import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.model.Building;
+import dk.elkjaerit.smartheating.model.PredictionOverview;
+import dk.elkjaerit.smartheating.model.PredictionOverview.Label;
 import dk.elkjaerit.smartheating.model.Room;
 import dk.elkjaerit.smartheating.weather.WeatherForecast;
+import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class Predictor {
+  private static final Logger LOG = Logger.getLogger(Predictor.class.getName());
   private static final BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
 
   public static void main(String[] args) {
@@ -24,92 +29,70 @@ public class Predictor {
     building.getRooms().stream()
         .filter(room -> room.getName().equals("Alrum"))
         .forEach(
-            room ->
-                predict(
-                    room,
-                    WeatherForecast.builder().cloudCover(30).azimuth(180).zenith(65).build()));
+            room -> {
+              Label res =
+                  predict(
+                      room,
+                      WeatherForecast.builder().cloudCover(30).azimuth(180).zenith(65).build());
+              System.out.println(room.getName() + ": " + res);
+            });
   }
 
-  public static boolean predict(Room room, WeatherForecast weatherForecast) {
-    String query = null;
+  public static Label predict(Room room, WeatherForecast weatherForecast) {
     try {
-      query = buildQuery(room, weatherForecast);
-
+      String query = buildQuery(room, weatherForecast);
       QueryJobConfiguration queryConfig =
           QueryJobConfiguration.newBuilder(query)
-              // Use standard SQL syntax for queries.
-              // See: https://cloud.google.com/bigquery/sql-reference/
               .setUseLegacySql(false)
               .build();
-
       JobId jobId = JobId.of(UUID.randomUUID().toString());
 
       Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
       job.waitFor();
 
-      TableResult result = job.getQueryResults();
-
-      List<FieldValueList> rows = new ArrayList<>();
-      result.iterateAll().forEach(rows::add);
-      FieldValueList row = (FieldValueList) rows.get(0);
-      String prediction = row.get(0).getStringValue();
-
-      String predic = row.get(1).getRecordValue().get(0).getRecordValue().get(0).getStringValue();
-      double prohi = row.get(1).getRecordValue().get(0).getRecordValue().get(1).getDoubleValue();
-
-      String predic1 = row.get(1).getRecordValue().get(1).getRecordValue().get(0).getStringValue();
-      double prohi1 = row.get(1).getRecordValue().get(1).getRecordValue().get(1).getDoubleValue();
-
-      double threshold = 0.65;
-      return prohi1 > threshold;
-
-      //        result
-      //          .iterateAll()
-      //          .forEach(
-      //              row -> {
-      //                String prediction = row.get(0).getStringValue();
-      //
-      //                String predic =
-      //
-      // row.get(1).getRecordValue().get(0).getRecordValue().get(0).getStringValue();
-      //                double prohi =
-      //
-      // row.get(1).getRecordValue().get(0).getRecordValue().get(1).getDoubleValue();
-      //
-      //                String predic1 =
-      //
-      // row.get(1).getRecordValue().get(1).getRecordValue().get(0).getStringValue();
-      //                double prohi1 =
-      //
-      // row.get(1).getRecordValue().get(1).getRecordValue().get(1).getDoubleValue();
-      //
-      //                if (prohi1 > 0.65) {
-      //                  return true;
-      //                }
-
-      //                System.out.println(predic + ": " + prohi);
-      //                System.out.println(predic1 + ": " + prohi1);
-      //
-      //                row.forEach(fieldValue -> System.out.println(fieldValue.toString()
-      // + ", "));
-      //                System.out.println();
-      //              });
-
-    } catch (IOException | URISyntaxException e) {
-      e.printStackTrace();
-    } catch (InterruptedException e) {
-      e.printStackTrace();
+      PredictionOverview build = createResult(job);
+      LOG.info("" + build);
+      return build.getResult();
+    } catch (Exception e) {
+      LOG.log(Level.SEVERE, "Could not make prediction for room " + room.getName(), e);
+      return Label.NEGATIVE;
     }
-    return false;
+  }
+
+  private static PredictionOverview createResult(Job job) throws InterruptedException {
+    TableResult result = job.getQueryResults();
+
+    List<FieldValueList> rows = new ArrayList<>();
+    result.iterateAll().forEach(rows::add);
+
+    FieldValueList row = rows.get(0);
+
+    FieldValueList positive = row.get(1).getRecordValue().get(0).getRecordValue();
+    FieldValueList negative = row.get(1).getRecordValue().get(1).getRecordValue();
+
+    return PredictionOverview.builder()
+        .calculated(Label.create(row.get(0).getStringValue()))
+        .result(
+            PredictionOverview.ResultRow.builder()
+                .label(Label.POSITIVE)
+                .prohibition(positive.get(1).getDoubleValue())
+                .build())
+        .result(
+            PredictionOverview.ResultRow.builder()
+                .label(Label.NEGATIVE)
+                .prohibition(negative.get(1).getDoubleValue())
+                .build())
+        .build();
   }
 
   private static String buildQuery(Room room, WeatherForecast weatherForecast)
       throws IOException, URISyntaxException {
-    String rawQuery =
-        Files.readString(
-            Path.of(ModelCreator.class.getClassLoader().getResource("predict.sql").toURI()));
+    String fileContent =
+        IOUtils.toString(
+            Predictor.class.getClassLoader().getResourceAsStream("predict.sql"),
+            StandardCharsets.UTF_8);
     return String.format(
-        rawQuery,
+        fileContent,
         "smart-heating-1.sensors." + room.getName(),
         (int) weatherForecast.getCloudCover(),
         (int) weatherForecast.getAzimuth(),
