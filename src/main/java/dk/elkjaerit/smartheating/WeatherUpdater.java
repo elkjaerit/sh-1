@@ -1,10 +1,10 @@
 package dk.elkjaerit.smartheating;
 
 import dk.elkjaerit.smartheating.ml.Predictor;
-import dk.elkjaerit.smartheating.model.Building;
-import dk.elkjaerit.smartheating.model.DigitalOutput;
-import dk.elkjaerit.smartheating.model.PredictionOverview;
-import dk.elkjaerit.smartheating.model.Room;
+import dk.elkjaerit.smartheating.common.model.Building;
+import dk.elkjaerit.smartheating.common.model.DigitalOutput;
+import dk.elkjaerit.smartheating.common.model.PredictionOverview;
+import dk.elkjaerit.smartheating.common.model.Room;
 import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
 import dk.elkjaerit.smartheating.weather.WeatherForecast;
 
@@ -36,7 +36,7 @@ public class WeatherUpdater {
   private static void updateBuilding(Building building) {
     LOGGER.info("Update building");
     try {
-      WeatherForecast weatherForecast = getActualWeatherForecast(building);
+      WeatherForecast weatherForecast = getActualWeatherForecast(building, getPredictionTimer());
       LOGGER.info("Weather forecast: " + weatherForecast);
       building.getRooms().forEach(room -> updateRoom(room, weatherForecast));
     } catch (IOException | InterruptedException e) {
@@ -72,7 +72,7 @@ public class WeatherUpdater {
   }
 
   private static double adjustForNight(double powerForRoom) {
-    ZonedDateTime zonedDateTime = ZonedDateTime.now(ZoneId.of("Europe/Copenhagen")).plusHours(6);
+    ZonedDateTime zonedDateTime = getPredictionTimer();
     if (zonedDateTime.getHour() > 20 || zonedDateTime.getHour() < 5) {
       LOGGER.info("Adjusted for night");
       return powerForRoom * 0.25;
@@ -81,13 +81,16 @@ public class WeatherUpdater {
     }
   }
 
-  private static WeatherForecast getActualWeatherForecast(Building building)
+  private static WeatherForecast getActualWeatherForecast(Building building, ZonedDateTime predictionTimer)
       throws IOException, InterruptedException {
     List<WeatherForecast> forecast = OpenWeatherMapClient.getForecast(building);
-    ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Copenhagen")).plusHours(6);
     return forecast.stream()
-        .min(Comparator.comparing(o -> absDiff(now, o)))
+        .min(Comparator.comparing(o -> absDiff(predictionTimer, o)))
         .orElseThrow(() -> new IllegalStateException("Could not find weather."));
+  }
+
+  private static ZonedDateTime getPredictionTimer() {
+    return ZonedDateTime.now(ZoneId.of("Europe/Copenhagen")).plusHours(6);
   }
 
   private static Long absDiff(ZonedDateTime now, WeatherForecast o1) {

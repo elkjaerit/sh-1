@@ -3,8 +3,8 @@ package dk.elkjaerit.smartheating.ml;
 import com.google.cloud.bigquery.*;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.model.Building;
-import dk.elkjaerit.smartheating.model.Room;
+import dk.elkjaerit.smartheating.common.model.Building;
+import dk.elkjaerit.smartheating.common.model.Room;
 
 import java.io.IOException;
 import java.net.URISyntaxException;

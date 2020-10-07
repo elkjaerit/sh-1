@@ -1,10 +1,9 @@
 package dk.elkjaerit.smartheating.powerunit;
 
 import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.model.Building;
-import dk.elkjaerit.smartheating.model.DigitalOutput;
-import dk.elkjaerit.smartheating.model.Room;
-import org.apache.commons.lang3.RandomUtils;
+import dk.elkjaerit.smartheating.common.model.Building;
+import dk.elkjaerit.smartheating.common.model.DigitalOutput;
+import dk.elkjaerit.smartheating.common.model.Room;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;

@@ -4,7 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import dk.elkjaerit.smartheating.model.Building;
+import dk.elkjaerit.smartheating.common.model.Building;
 import lombok.Builder;
 import lombok.Value;
 import net.e175.klaus.solarpositioning.AzimuthZenithAngle;

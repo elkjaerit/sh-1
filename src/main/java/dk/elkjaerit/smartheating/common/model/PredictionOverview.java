@@ -1,4 +1,4 @@
-package dk.elkjaerit.smartheating.model;
+package dk.elkjaerit.smartheating.common.model;
 
 import lombok.Builder;
 import lombok.Singular;

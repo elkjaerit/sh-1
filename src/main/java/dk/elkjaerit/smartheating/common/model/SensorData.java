@@ -1,8 +1,6 @@
-package dk.elkjaerit.smartheating.model;
+package dk.elkjaerit.smartheating.common.model;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.NoArgsConstructor;
 import lombok.Value;
 
 @Value

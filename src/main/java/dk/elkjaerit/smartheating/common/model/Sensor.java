@@ -1,9 +1,7 @@
-package dk.elkjaerit.smartheating.model;
+package dk.elkjaerit.smartheating.common.model;
 
 import com.google.cloud.Timestamp;
 import lombok.*;
-
-import java.time.LocalDateTime;
 
 @Data
 @Builder

@@ -6,11 +6,11 @@ import com.google.cloud.functions.BackgroundFunction;
 import com.google.cloud.functions.Context;
 import com.google.gson.Gson;
 import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.Repository;
-import dk.elkjaerit.smartheating.model.Building;
-import dk.elkjaerit.smartheating.model.Room;
-import dk.elkjaerit.smartheating.model.Sensor;
-import dk.elkjaerit.smartheating.model.SensorData;
+import dk.elkjaerit.smartheating.BigQueryRepository;
+import dk.elkjaerit.smartheating.common.model.Building;
+import dk.elkjaerit.smartheating.common.model.Room;
+import dk.elkjaerit.smartheating.common.model.Sensor;
+import dk.elkjaerit.smartheating.common.model.SensorData;
 import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
 import dk.elkjaerit.smartheating.weather.Weather;
 import org.apache.commons.lang3.StringUtils;
@@ -43,7 +43,7 @@ public class Consumer implements BackgroundFunction<Consumer.PubSubMessage> {
 
       Weather currentWeather = OpenWeatherMapClient.getCurrentWeather(building);
       Map<String, Object> rowContent = createRowFromJson(sensorData, currentWeather, room);
-      Repository.tableInsertRows(rowContent);
+      BigQueryRepository.tableInsertRows(rowContent);
 
       logger.info("Data inserted: " + room.map(Room::getName).orElse("-"));
       updateBuilding(sensorData, buildingRef, building, room);

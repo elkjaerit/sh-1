@@ -1,11 +1,9 @@
-package dk.elkjaerit.smartheating.model;
+package dk.elkjaerit.smartheating.common.model;
 
 import com.google.cloud.Timestamp;
-import io.opencensus.metrics.export.TimeSeries;
 import lombok.*;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 @NoArgsConstructor
 @AllArgsConstructor

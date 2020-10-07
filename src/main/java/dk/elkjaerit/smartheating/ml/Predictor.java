@@ -2,10 +2,10 @@ package dk.elkjaerit.smartheating.ml;
 
 import com.google.cloud.bigquery.*;
 import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.model.Building;
-import dk.elkjaerit.smartheating.model.PredictionOverview;
-import dk.elkjaerit.smartheating.model.PredictionOverview.Label;
-import dk.elkjaerit.smartheating.model.Room;
+import dk.elkjaerit.smartheating.common.model.Building;
+import dk.elkjaerit.smartheating.common.model.PredictionOverview;
+import dk.elkjaerit.smartheating.common.model.PredictionOverview.Label;
+import dk.elkjaerit.smartheating.common.model.Room;
 import dk.elkjaerit.smartheating.weather.WeatherForecast;
 import org.apache.commons.io.IOUtils;
 
