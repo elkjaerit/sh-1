@@ -47,9 +47,11 @@ public class WeatherUpdater {
   private static void updateRoom(Room room, WeatherForecast weatherForecast) {
     LOGGER.info("Updating room : " + room.getName());
 
+    PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
+    LOGGER.info("Prediction: " + room.getName() + ": " + predictedLabel);
+
     double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
     double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 15;
-
     double powerCalculatedFromWeather =
         1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
 
@@ -63,10 +65,6 @@ public class WeatherUpdater {
     }
 
     room.getDigitalOutput().updatePower(adjustedForNight);
-
-    PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
-
-    LOGGER.info("Prediction: " + room.getName() + ": " + predictedLabel);
 
     LOGGER.info("Power for room: " + room.getDigitalOutput().getPower());
   }

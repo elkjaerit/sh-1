@@ -8,6 +8,7 @@ import dk.elkjaerit.smartheating.common.model.DigitalOutput;
 import dk.elkjaerit.smartheating.common.model.Room;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -23,6 +24,12 @@ public class FireStoreDemo {
             .build();
     Firestore db = firestoreOptions.getService();
 
+
+//    Optional<QueryDocumentSnapshot> building = BuildingRepository.getBuildingByGatewayId("B93A7D80");
+//    Optional<QueryDocumentSnapshot> room = BuildingRepository.getRoomBySensorId(building.get().getReference(), "58:2D:34:35:D8:73");
+//    Room room1 = room.map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class)).orElseThrow();
+//    System.out.println(room1);
+
     createSomeData(db);
 
     //    QueryDocumentSnapshot buildingReference =
@@ -37,82 +44,103 @@ public class FireStoreDemo {
 
   private static void createSomeData(Firestore db) throws InterruptedException, ExecutionException {
     CollectionReference buildings = db.collection("buildings");
-    //    ApiFuture<WriteResult> set =
-    //        buildings
-    //            .document(UUID.randomUUID().toString())
-    //            .collection("rooms")
-    //            .document()
-    //            .set(new Room(UUID.randomUUID().toString(), "Ida er ikke med ?",
-    // "58:2D:34:35:DB:12",null, null));
-    //
-    //    set.get();
 
-    Building building =
-        Building.builder()
-            .location(new GeoPoint(56.315498, 10.32041))
-            .gatewayId("B93A7D80")
-            .cityId("2619787")
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Bryggers/Entre")
-                    .digitalOutput(DigitalOutput.builder().pinId(1).build())
-                    .sensorId(null)
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Bad")
-                    .digitalOutput(DigitalOutput.builder().pinId(2).build())
-                    .sensorId("58:2D:34:35:AE:31")
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Kontor")
-                    .digitalOutput(DigitalOutput.builder().pinId(3).build())
-                    .sensorId("58:2D:34:35:CB:89")
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Stue")
-                    .digitalOutput(DigitalOutput.builder().pinId(4).build())
-                    .sensorId("58:2D:34:35:D5:A0")
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Alrum")
-                    .digitalOutput(DigitalOutput.builder().pinId(5).build())
-                    .sensorId("58:2D:34:35:D8:73")
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Lille bad")
-                    .digitalOutput(DigitalOutput.builder().pinId(6).build())
-                    .sensorId("58:2D:34:35:CC:C4")
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Mathilde")
-                    .digitalOutput(DigitalOutput.builder().pinId(7).build())
-                    .sensorId("58:2D:34:35:DB:07")
-                    .build())
-            .room(
-                Room.builder()
-                    .id(UUID.randomUUID().toString())
-                    .name("Ida")
-                    .digitalOutput(DigitalOutput.builder().pinId(8).build())
-                    .sensorId("58:2D:34:35:DB:12")
-                    .build())
-            .build();
+    Optional<QueryDocumentSnapshot> bb = BuildingRepository.getBuildingByGatewayId("B93A7D80");
+    CollectionReference rooms = bb.get().getReference().collection("rooms");
 
-    ApiFuture<WriteResult> future =
-        db.collection("buildings").document(UUID.randomUUID().toString()).set(building);
-    //     block on response if required
-    System.out.println("Update time : " + future.get().getUpdateTime());
+    Building building = bb.get().toObject(Building.class);
+
+    building.getRooms().forEach(room -> rooms.document(room.getId()).set(room));
+//
+//    ApiFuture<WriteResult> set1 = rooms.document("demoroom").set(Room.builder()
+//            .id(UUID.randomUUID().toString())
+//            .name("Bryggers/Entre")
+//            .digitalOutput(DigitalOutput.builder().pinId(1).build())
+//            .sensorId(null)
+//            .build());
+
+//
+//    ApiFuture<WriteResult> set =
+//            buildings
+//                .document(UUID.randomUUID().toString())
+//                .collection("rooms")
+//                .document()
+//                .set( Room.builder()
+//                        .id(UUID.randomUUID().toString())
+//                        .name("Bryggers/Entre")
+//                        .digitalOutput(DigitalOutput.builder().pinId(1).build())
+//                        .sensorId(null)
+//                        .build());
+//        set.get();
+
+
+
+//    Building building =
+//        Building.builder()
+//            .location(new GeoPoint(56.315498, 10.32041))
+//            .gatewayId("B93A7D80")
+//            .cityId("2619787")
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Bryggers/Entre")
+//                    .digitalOutput(DigitalOutput.builder().pinId(1).build())
+//                    .sensorId(null)
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Bad")
+//                    .digitalOutput(DigitalOutput.builder().pinId(2).build())
+//                    .sensorId("58:2D:34:35:AE:31")
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Kontor")
+//                    .digitalOutput(DigitalOutput.builder().pinId(3).build())
+//                    .sensorId("58:2D:34:35:CB:89")
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Stue")
+//                    .digitalOutput(DigitalOutput.builder().pinId(4).build())
+//                    .sensorId("58:2D:34:35:D5:A0")
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Alrum")
+//                    .digitalOutput(DigitalOutput.builder().pinId(5).build())
+//                    .sensorId("58:2D:34:35:D8:73")
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Lille bad")
+//                    .digitalOutput(DigitalOutput.builder().pinId(6).build())
+//                    .sensorId("58:2D:34:35:CC:C4")
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Mathilde")
+//                    .digitalOutput(DigitalOutput.builder().pinId(7).build())
+//                    .sensorId("58:2D:34:35:DB:07")
+//                    .build())
+//            .room(
+//                Room.builder()
+//                    .id(UUID.randomUUID().toString())
+//                    .name("Ida")
+//                    .digitalOutput(DigitalOutput.builder().pinId(8).build())
+//                    .sensorId("58:2D:34:35:DB:12")
+//                    .build())
+//            .build();
+//
+//    ApiFuture<WriteResult> future =
+//        db.collection("buildings").document(UUID.randomUUID().toString()).set(building);
+//    //     block on response if required
+//    System.out.println("Update time : " + future.get().getUpdateTime());
   }
 }

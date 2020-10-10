@@ -5,15 +5,16 @@ import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.functions.BackgroundFunction;
 import com.google.cloud.functions.Context;
 import com.google.gson.Gson;
-import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.BigQueryRepository;
+import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.Room;
 import dk.elkjaerit.smartheating.common.model.Sensor;
 import dk.elkjaerit.smartheating.common.model.SensorData;
 import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
 import dk.elkjaerit.smartheating.weather.Weather;
-import org.apache.commons.lang3.StringUtils;
+import lombok.AllArgsConstructor;
+import lombok.Value;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,42 +27,56 @@ import java.util.logging.Logger;
 public class Consumer implements BackgroundFunction<Consumer.PubSubMessage> {
   private static final Logger logger = Logger.getLogger(Consumer.class.getName());
   private static final Gson gson = new Gson();
+  public static final int UPDATE_INTERVAL_SECONDS = 60;
 
   @Override
   public void accept(PubSubMessage message, Context context) {
     String data = new String(Base64.getDecoder().decode(message.data));
     logger.info("Received data: " + data);
+
     SensorData sensorData = gson.fromJson(data, SensorData.class);
 
-    Optional<QueryDocumentSnapshot> buildingRef =
+    Optional<QueryDocumentSnapshot> buildingSnapshot =
         BuildingRepository.getBuildingByGatewayId(sensorData.getDeviceId());
 
-    if (buildingRef.isPresent()) {
+    if (buildingSnapshot.isPresent()) {
+      QueryDocumentSnapshot buildingSnap = buildingSnapshot.get();
 
-      Building building = buildingRef.get().toObject(Building.class);
-      Optional<Room> room = findRoom(building, sensorData);
+      Optional<QueryDocumentSnapshot> roomSnap =
+          BuildingRepository.getRoomBySensorId(buildingSnap.getReference(), sensorData.getMac());
 
-      Weather currentWeather = OpenWeatherMapClient.getCurrentWeather(building);
-      Map<String, Object> rowContent = createRowFromJson(sensorData, currentWeather, room);
-      BigQueryRepository.tableInsertRows(rowContent);
+      Optional<Room> room =
+          roomSnap.map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class));
 
-      logger.info("Data inserted: " + room.map(Room::getName).orElse("-"));
-      updateBuilding(sensorData, buildingRef, building, room);
+      if (room.isPresent()) {
+        if (sensorDataIsOutdated(roomSnap.get())) {
+          Building building = buildingSnap.toObject(Building.class);
+          Weather currentWeather = OpenWeatherMapClient.getCurrentWeather(building);
+          Map<String, Object> rowContent = createRowFromJson(sensorData, currentWeather, room);
+          BigQueryRepository.tableInsertRows(rowContent);
+          updateRoomSensorData(roomSnap.get(), sensorData);
+        }
+      }
     }
   }
 
-  private void updateBuilding(SensorData sensorData, Optional<QueryDocumentSnapshot> buildingRef, Building building, Optional<Room> room) {
-    if (room.isPresent()) {
-      room.get()
-          .setSensor(
-              Sensor.builder()
-                  .lastUpdated(Timestamp.now())
-                  .temperature(sensorData.getTemp())
-                  .rssi(sensorData.getRssi())
-                  .humidity(sensorData.getHumidity())
-                  .build());
-      buildingRef.get().getReference().set(building);
-    }
+  private boolean sensorDataIsOutdated(QueryDocumentSnapshot roomSnap) {
+    Timestamp timestamp = roomSnap.getTimestamp("sensor.lastUpdated");
+    return timestamp != null
+            && Timestamp.now().getSeconds() - timestamp.getSeconds() > UPDATE_INTERVAL_SECONDS;
+  }
+
+  private void updateRoomSensorData(QueryDocumentSnapshot room, SensorData sensorData) {
+    room.getReference()
+        .update(
+            Map.of(
+                "sensor",
+                Sensor.builder()
+                    .lastUpdated(Timestamp.now())
+                    .temperature(sensorData.getTemp())
+                    .rssi(sensorData.getRssi())
+                    .humidity(sensorData.getHumidity())
+                    .build()));
   }
 
   private Map<String, Object> createRowFromJson(
@@ -85,12 +100,8 @@ public class Consumer implements BackgroundFunction<Consumer.PubSubMessage> {
     return rowContent;
   }
 
-  private Optional<Room> findRoom(Building building, SensorData requestJson) {
-    return building.getRooms().stream()
-        .filter(room -> StringUtils.equals(room.getSensorId(), requestJson.getMac()))
-        .findFirst();
-  }
-
+  @Value
+  @AllArgsConstructor
   public static class PubSubMessage {
     String data;
     Map<String, String> attributes;

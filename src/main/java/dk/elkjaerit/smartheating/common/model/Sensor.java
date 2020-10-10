@@ -12,4 +12,8 @@ public class Sensor {
     Timestamp lastUpdated;
     double humidity;
     int rssi;
+
+    public boolean isOutdated(int ttl){
+        return Timestamp.now().getSeconds()-lastUpdated.getSeconds() > ttl;
+    }
 }

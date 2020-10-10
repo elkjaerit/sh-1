@@ -2,12 +2,10 @@ package dk.elkjaerit.smartheating;
 
 import com.google.api.core.ApiFuture;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.FirestoreOptions;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.*;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
@@ -50,4 +48,23 @@ public class BuildingRepository {
       throw new RuntimeException("Error getting building with gateWayId: " + gatewayId);
     }
   }
+
+  public static Optional<QueryDocumentSnapshot> getRoomBySensorId(DocumentReference building, String sensorId){
+
+    Query query = building.collection("rooms").whereEqualTo("sensorId", sensorId);
+    try {
+      List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+      if (documents.size()>1) {
+        throw new IllegalArgumentException("Found too many rooms");
+      }
+      return documents.stream().findFirst();
+
+    } catch (InterruptedException | ExecutionException e) {
+      e.printStackTrace();
+    }
+
+    return Optional.empty();
+
+  }
+
 }
