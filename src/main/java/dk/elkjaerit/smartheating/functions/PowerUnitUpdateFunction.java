@@ -10,6 +10,5 @@ public class PowerUnitUpdateFunction implements BackgroundFunction<Consumer.PubS
     @Override
     public void accept(Consumer.PubSubMessage pubSubMessage, Context context) throws Exception {
         PowerUnitUpdater.update();
-
     }
 }

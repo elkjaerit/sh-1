@@ -1,10 +1,12 @@
 package dk.elkjaerit.smartheating;
 
-import dk.elkjaerit.smartheating.ml.Predictor;
+import com.google.cloud.firestore.CollectionReference;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
 import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.DigitalOutput;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview;
 import dk.elkjaerit.smartheating.common.model.Room;
+import dk.elkjaerit.smartheating.ml.Predictor;
 import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
 import dk.elkjaerit.smartheating.weather.WeatherForecast;
 
@@ -14,6 +16,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class WeatherUpdater {
@@ -24,27 +28,35 @@ public class WeatherUpdater {
   }
 
   public static void run() {
-    BuildingRepository.getBuildings()
-        .forEach(
-            queryDocumentSnapshot -> {
-              Building building = queryDocumentSnapshot.toObject(Building.class);
-              updateBuilding(building);
-              queryDocumentSnapshot.getReference().set(building);
-            });
+    BuildingRepository.getBuildings().forEach(WeatherUpdater::updateBuilding);
   }
 
-  private static void updateBuilding(Building building) {
+  private static void updateBuilding(QueryDocumentSnapshot buildingSnapshot) {
     LOGGER.info("Update building");
     try {
+      Building building = buildingSnapshot.toObject(Building.class);
       WeatherForecast weatherForecast = getActualWeatherForecast(building, getPredictionTimer());
       LOGGER.info("Weather forecast: " + weatherForecast);
-      building.getRooms().forEach(room -> updateRoom(room, weatherForecast));
-    } catch (IOException | InterruptedException e) {
-      e.printStackTrace();
+      buildingSnapshot
+          .getReference()
+          .collection("rooms")
+          .get()
+          .get()
+          .getDocuments()
+          .forEach(
+              room -> {
+                updateRoom(room, weatherForecast);
+              });
+    } catch (IOException | InterruptedException | ExecutionException e) {
+      LOGGER.log(Level.SEVERE, "Error updating building", e);
     }
   }
 
-  private static void updateRoom(Room room, WeatherForecast weatherForecast) {
+  private static void updateRoom(
+      QueryDocumentSnapshot roomQueryDocumentSnapshot, WeatherForecast weatherForecast) {
+
+    Room room = roomQueryDocumentSnapshot.toObject(Room.class);
+
     LOGGER.info("Updating room : " + room.getName());
 
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
@@ -67,6 +79,7 @@ public class WeatherUpdater {
     room.getDigitalOutput().updatePower(adjustedForNight);
 
     LOGGER.info("Power for room: " + room.getDigitalOutput().getPower());
+    roomQueryDocumentSnapshot.getReference().set(room);
   }
 
   private static double adjustForNight(double powerForRoom) {
@@ -79,8 +92,8 @@ public class WeatherUpdater {
     }
   }
 
-  private static WeatherForecast getActualWeatherForecast(Building building, ZonedDateTime predictionTimer)
-      throws IOException, InterruptedException {
+  private static WeatherForecast getActualWeatherForecast(
+      Building building, ZonedDateTime predictionTimer) throws IOException, InterruptedException {
     List<WeatherForecast> forecast = OpenWeatherMapClient.getForecast(building);
     return forecast.stream()
         .min(Comparator.comparing(o -> absDiff(predictionTimer, o)))
