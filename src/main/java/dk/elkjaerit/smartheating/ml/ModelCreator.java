@@ -1,34 +1,39 @@
 package dk.elkjaerit.smartheating.ml;
 
 import com.google.cloud.bigquery.*;
-import com.google.cloud.firestore.QueryDocumentSnapshot;
-import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.Room;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Logger;
+
+import static dk.elkjaerit.smartheating.BuildingRepository.getRooms;
 
 public class ModelCreator {
   private static final BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
   private static final Logger LOG = Logger.getLogger(ModelCreator.class.getName());
 
   public static void main(String[] args) {
-    Optional<QueryDocumentSnapshot> building =
-        BuildingRepository.getBuildingByGatewayId("B93A7D80");
-    Building building1 = building.get().toObject(Building.class);
-    create(building1);
+    try {
+      create("B93A7D80");
+    } catch (ExecutionException e) {
+      e.printStackTrace();
+    } catch (InterruptedException e) {
+      e.printStackTrace();
+    }
   }
 
-  public static void create(Building building) {
-    building.getRooms().stream()
-        .filter(room -> room.getName().equals("Alrum"))
-        .forEach(ModelCreator::buildModelForRoom);
+  public static void create(String gatewayId) throws ExecutionException, InterruptedException {
+    getRooms(gatewayId)
+        .forEach(
+            roomDocumentSnapshot -> {
+              Room room = roomDocumentSnapshot.toObject(Room.class);
+              buildModelForRoom(room);
+            });
   }
 
   private static void buildModelForRoom(Room room) {
@@ -39,8 +44,6 @@ public class ModelCreator {
 
       QueryJobConfiguration queryConfig =
           QueryJobConfiguration.newBuilder(query)
-              // Use standard SQL syntax for queries.
-              // See: https://cloud.google.com/bigquery/sql-reference/
               .setUseLegacySql(false)
               .build();
 
@@ -48,11 +51,6 @@ public class ModelCreator {
 
       Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
       job.waitFor();
-
-
-
-
-
 
       //      if (job.getStatus().getError() != null) {
       //        System.out.println(job.getStatus().getError().toString());

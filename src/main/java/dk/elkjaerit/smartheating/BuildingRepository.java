@@ -49,6 +49,16 @@ public class BuildingRepository {
     }
   }
 
+  public static List<QueryDocumentSnapshot> getRooms(String gatewayId) throws InterruptedException, ExecutionException {
+    return BuildingRepository.getBuildingByGatewayId(gatewayId)
+            .get()
+            .getReference()
+            .collection("rooms")
+            .get()
+            .get()
+            .getDocuments();
+  }
+
   public static Optional<QueryDocumentSnapshot> getRoomBySensorId(DocumentReference building, String sensorId){
 
     Query query = building.collection("rooms").whereEqualTo("sensorId", sensorId);

@@ -56,30 +56,34 @@ public class WeatherUpdater {
       QueryDocumentSnapshot roomQueryDocumentSnapshot, WeatherForecast weatherForecast) {
 
     Room room = roomQueryDocumentSnapshot.toObject(Room.class);
-
+    if (room.getDigitalOutput() == null) {
+      room.setDigitalOutput(DigitalOutput.builder().build());
+    }
     LOGGER.info("Updating room : " + room.getName());
 
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
     LOGGER.info("Prediction: " + room.getName() + ": " + predictedLabel);
 
-    double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
-    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 15;
-    double powerCalculatedFromWeather =
-        1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
+    double power;
 
-    double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
-    double powerForRoom = Math.max(minimumPowerForRoom, Math.min(1, powerCalculatedFromWeather));
-
-    double adjustedForNight = adjustForNight(powerForRoom);
-
-    if (room.getDigitalOutput() == null) {
-      room.setDigitalOutput(DigitalOutput.builder().build());
+    if (predictedLabel == PredictionOverview.Label.NEGATIVE) {
+      room.getDigitalOutput().setPower(0);
+    } else {
+      power = calculateFromWeatherForecast(weatherForecast, room);
+      double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
+      double powerForRoom = Math.max(minimumPowerForRoom, Math.min(1, power));
+      double adjustedForNight = adjustForNight(powerForRoom);
+      room.getDigitalOutput().updatePower(adjustedForNight);
     }
-
-    room.getDigitalOutput().updatePower(adjustedForNight);
 
     LOGGER.info("Power for room: " + room.getDigitalOutput().getPower());
     roomQueryDocumentSnapshot.getReference().set(room);
+  }
+
+  private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
+    double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
+    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 15;
+    return 1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
   }
 
   private static double adjustForNight(double powerForRoom) {

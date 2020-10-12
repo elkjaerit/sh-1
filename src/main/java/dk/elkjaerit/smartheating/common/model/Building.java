@@ -11,8 +11,6 @@ import java.util.List;
 @NoArgsConstructor
 public class Building {
     @Singular
-    private List<Room> rooms;
-    @Singular
     private List<String> gatewayIds;
     private GeoPoint location;
     private String cityId;

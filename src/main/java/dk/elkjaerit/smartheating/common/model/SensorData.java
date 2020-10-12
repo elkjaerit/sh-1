@@ -3,14 +3,20 @@ package dk.elkjaerit.smartheating.common.model;
 import lombok.Builder;
 import lombok.Value;
 
+import java.util.Objects;
+
 @Value
 @Builder
 public class SensorData {
-    long timestamp;
+    Long timestamp;
     String deviceId;
     String mac;
-    double temp;
-    double humidity;
-    double batt;
-    int rssi;
+    Double temp;
+    Double humidity;
+    Double batt;
+    Integer rssi;
+
+    public boolean isBatteryUpdate(){
+        return Objects.nonNull(batt);
+    }
 }

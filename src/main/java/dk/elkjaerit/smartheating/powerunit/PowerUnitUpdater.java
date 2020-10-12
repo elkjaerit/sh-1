@@ -1,13 +1,17 @@
 package dk.elkjaerit.smartheating.powerunit;
 
+import com.google.cloud.firestore.DocumentReference;
 import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.DigitalOutput;
 import dk.elkjaerit.smartheating.common.model.Room;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class PowerUnitUpdater {
 
@@ -21,36 +25,51 @@ public class PowerUnitUpdater {
     BuildingRepository.getBuildings()
         .forEach(
             queryDocumentSnapshot -> {
-              Building building = queryDocumentSnapshot.toObject(Building.class);
+              DocumentReference building = queryDocumentSnapshot.getReference();
               updateBuilding(building);
-              queryDocumentSnapshot.getReference().set(building);
             });
   }
 
-  private static void updateBuilding(Building building) {
-    long locationUpdateCount =
-        building.getRooms().stream()
-            .map(room -> room.getDigitalOutput().update(3600))
-            .filter(Boolean::booleanValue)
-            .count();
+  private static void updateBuilding(DocumentReference building) {
+    try {
+      long locationUpdateCount =
+          building.collection("rooms").get().get().getDocuments().stream()
+              .map(
+                  queryDocumentSnapshot -> {
+                    Room room = queryDocumentSnapshot.toObject(Room.class);
+                    boolean updated = room.getDigitalOutput().update(3600);
+                    if (updated) {
+                      queryDocumentSnapshot.getReference().set(room);
+                      return true;
+                    } else {
+                      return false;
+                    }
+                  })
+              .filter(Boolean::booleanValue)
+              .count();
 
-    if (locationUpdateCount > 0) {
-      int state = getStateAsBinary(building);
+      if (locationUpdateCount > 0) {
+        List<Room> rooms =
+            building.collection("rooms").get().get().getDocuments().stream()
+                .map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class))
+                .collect(Collectors.toList());
 
-      try {
-        PowerUnitClient.sendConfiguration("power-unit-device",
-                String.valueOf(state));
+        int state = getStateAsBinary(rooms);
 
-      } catch (GeneralSecurityException | IOException e) {
-        LOG.severe("Could not send message");
+        try {
+          PowerUnitClient.sendConfiguration("power-unit-device", String.valueOf(state));
+        } catch (GeneralSecurityException | IOException e) {
+          LOG.severe("Could not send message");
+        }
+        LOG.info("Updating power unit State: " + state);
       }
-
-      LOG.info("Updating power unit State: " + state);
+    } catch (InterruptedException | ExecutionException e) {
+      LOG.log(Level.SEVERE, "Error updating power unit", e);
     }
   }
 
-  private static int getStateAsBinary(Building building) {
-    return building.getRooms().stream()
+  private static int getStateAsBinary(List<Room> rooms) {
+    return rooms.stream()
         .map(Room::getDigitalOutput)
         .filter(DigitalOutput::isTurnedOn)
         .map(DigitalOutput::getPinId)

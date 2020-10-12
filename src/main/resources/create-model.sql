@@ -14,7 +14,7 @@ SELECT
  round(AVG(azimuth) OVER (rolling_six_days)/5)*5 azimuth_bucket,
  round(AVG(zenith) OVER (rolling_six_days)/5)*5 zenith_bucket,
  CASE
-   WHEN LAST_VALUE(temperature) over (rolling_six_days) - FIRST_VALUE(temperature) over (rolling_six_days) > 0.7 THEN 'HIGH_INC'
+   WHEN LAST_VALUE(temperature) over (rolling_six_days) - FIRST_VALUE(temperature) over (rolling_six_days) > 0.5 THEN 'HIGH_INC'
    ELSE 'NONE'
   END label,
   dataframe

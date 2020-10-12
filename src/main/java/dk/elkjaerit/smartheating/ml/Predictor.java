@@ -22,22 +22,6 @@ public class Predictor {
   private static final Logger LOG = Logger.getLogger(Predictor.class.getName());
   private static final BigQuery bigquery = BigQueryOptions.getDefaultInstance().getService();
 
-  public static void main(String[] args) {
-    Building building =
-        BuildingRepository.getBuildingByGatewayId("B93A7D80").get().toObject(Building.class);
-
-    building.getRooms().stream()
-        .filter(room -> room.getName().equals("Alrum"))
-        .forEach(
-            room -> {
-              Label res =
-                  predict(
-                      room,
-                      WeatherForecast.builder().cloudCover(30).azimuth(180).zenith(65).build());
-              System.out.println(room.getName() + ": " + res);
-            });
-  }
-
   public static Label predict(Room room, WeatherForecast weatherForecast) {
     try {
       String query = buildQuery(room, weatherForecast);
@@ -86,7 +70,7 @@ public class Predictor {
   }
 
   private static String buildQuery(Room room, WeatherForecast weatherForecast)
-      throws IOException, URISyntaxException {
+      throws IOException {
     String fileContent =
         IOUtils.toString(
             Predictor.class.getClassLoader().getResourceAsStream("predict.sql"),
