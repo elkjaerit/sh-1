@@ -73,6 +73,15 @@ public class WeatherUpdater {
       double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
       double powerForRoom = Math.max(minimumPowerForRoom, Math.min(1, power));
       double adjustedForNight = adjustForNight(powerForRoom);
+
+      if (room.getSensor().getTemperature()>25.0){
+        LOGGER.info("Temp (very) too high - set to 0!");
+        adjustedForNight = 0;
+      } else if (room.getSensor().getTemperature()>24.5){
+        LOGGER.info("Temp too high - use only half of calculated!");
+        adjustedForNight = .5 * adjustedForNight;
+      }
+
       room.getDigitalOutput().updatePower(adjustedForNight);
     }
 
@@ -82,7 +91,7 @@ public class WeatherUpdater {
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
     double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
-    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 15;
+    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 10;
     return 1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
   }
 
