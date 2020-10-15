@@ -8,12 +8,9 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Sensor {
-    double temperature;
     Timestamp lastUpdated;
-    double humidity;
-    int rssi;
-
-    public boolean isOutdated(int ttl){
-        return Timestamp.now().getSeconds()-lastUpdated.getSeconds() > ttl;
-    }
+    Double temperature;
+    Double humidity;
+    Integer rssi;
+    Double battery;
 }

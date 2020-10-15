@@ -100,7 +100,7 @@ public class SensorUpdater {
             sensorData.getTemp(),
             "sensor.rssi",
             sensorData.getRssi(),
-            "sendor.humidity",
+            "sensor.humidity",
             sensorData.getHumidity());
     room.getReference().update(values);
   }
