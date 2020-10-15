@@ -16,6 +16,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -86,7 +87,7 @@ public class WeatherUpdater {
     }
 
     LOGGER.info("Power for room: " + room.getDigitalOutput().getPower());
-    roomQueryDocumentSnapshot.getReference().set(room);
+    roomQueryDocumentSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput()));
   }
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {

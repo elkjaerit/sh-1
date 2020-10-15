@@ -1,6 +1,7 @@
 package dk.elkjaerit.smartheating.powerunit;
 
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
 import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.common.model.DigitalOutput;
 import dk.elkjaerit.smartheating.common.model.Room;
@@ -8,6 +9,7 @@ import dk.elkjaerit.smartheating.common.model.Room;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,40 +34,42 @@ public class PowerUnitUpdater {
 
   private static void updateBuilding(DocumentReference building) {
     try {
-      long locationUpdateCount =
-          building.collection("rooms").get().get().getDocuments().stream()
-              .map(
-                  queryDocumentSnapshot -> {
-                    Room room = queryDocumentSnapshot.toObject(Room.class);
-                    boolean updated = room.getDigitalOutput().update(3600);
-                    if (updated) {
-                      queryDocumentSnapshot.getReference().set(room);
-                      return true;
-                    } else {
-                      return false;
-                    }
-                  })
-              .filter(Boolean::booleanValue)
-              .count();
+      List<QueryDocumentSnapshot> roomSnapshotList =
+          building.collection("rooms").get().get().getDocuments();
+      boolean isRoomUpdated = roomSnapshotList.stream().anyMatch(PowerUnitUpdater::updateRoom);
 
-      if (locationUpdateCount > 0) {
-        List<Room> rooms =
-            building.collection("rooms").get().get().getDocuments().stream()
-                .map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class))
-                .collect(Collectors.toList());
-
-        int state = getStateAsBinary(rooms);
-
-        try {
-          PowerUnitClient.sendConfiguration("power-unit-device", String.valueOf(state));
-        } catch (GeneralSecurityException | IOException e) {
-          LOG.severe("Could not send message");
-        }
-        LOG.info("Updating power unit State: " + state);
+      if (isRoomUpdated) {
+        sendMessageToPowerUnit(roomSnapshotList);
       }
     } catch (InterruptedException | ExecutionException e) {
       LOG.log(Level.SEVERE, "Error updating power unit", e);
     }
+  }
+
+  private static void sendMessageToPowerUnit(List<QueryDocumentSnapshot> roomSnapshotList) {
+    List<Room> rooms =
+        roomSnapshotList.stream()
+            .map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class))
+            .collect(Collectors.toList());
+
+    int state = getStateAsBinary(rooms);
+
+    try {
+      PowerUnitClient.sendConfiguration("power-unit-device", String.valueOf(state));
+    } catch (GeneralSecurityException | IOException e) {
+      LOG.severe("Could not send message");
+    }
+    LOG.info("Updating power unit State: " + state);
+  }
+
+  private static boolean updateRoom(QueryDocumentSnapshot roomSnapshot) {
+    Room room = roomSnapshot.toObject(Room.class);
+    boolean updated = room.getDigitalOutput().update(3600);
+    if (updated) {
+      LOG.info("Room updated: " + room.getName() + ", digitalOutput: " + room.getDigitalOutput());
+      roomSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput()));
+    }
+    return updated;
   }
 
   private static int getStateAsBinary(List<Room> rooms) {
