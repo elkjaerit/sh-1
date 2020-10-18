@@ -53,7 +53,7 @@ public class DigitalOutput {
       return oldState != turnedOn;
     }
 
-    if (nextToggleTime == null || nextToggleTime.compareTo(Timestamp.now()) < 0) {
+    if (nextToggleTime == null || nextToggleTime.compareTo(Timestamp.now()) <= 0) {
       int secondsToAdd = (int) (periodInSeconds * (turnedOn ? (1 - power) : power));
       nextToggleTime =  Timestamp.ofTimeSecondsAndNanos(Instant.now().plusSeconds(secondsToAdd).getEpochSecond(), 0);
       turnedOn = !turnedOn;

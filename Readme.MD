@@ -2,8 +2,11 @@
 gcloud functions deploy sensor-consumer --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.Consumer --runtime java11 --trigger-topic=my-topic --allow-unauthenticated
 gcloud functions deploy power-unit-scheduling --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.PowerUnitUpdateFunction --runtime java11 --trigger-topic=power-unit-scheduler
 gcloud functions deploy weather-scheduling --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.WeatherUpdaterFunction --runtime java11 --trigger-topic=weather-scheduler
+gcloud functions deploy power-unit-trigger --region=europe-west1 --entry-point dk.elkjaerit.smartheating.functions.PowerUnitTaskFunction --runtime java11 --trigger-http --allow-unauthenticated
 ```
+ gcloud tasks queues create [QUEUE_ID]
  
+ curl -X POST "https://europe-west1-smart-heating-1.cloudfunctions.net/power-unit-trigger" -H "Content-Type:application/json" --data '{"name":"Keyboard Cat"}'
  
  SQL til moving average:
  

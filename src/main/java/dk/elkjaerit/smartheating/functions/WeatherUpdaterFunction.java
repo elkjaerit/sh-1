@@ -2,7 +2,7 @@ package dk.elkjaerit.smartheating.functions;
 
 import com.google.cloud.functions.BackgroundFunction;
 import com.google.cloud.functions.Context;
-import dk.elkjaerit.smartheating.WeatherUpdater;
+import dk.elkjaerit.smartheating.weather.WeatherUpdater;
 
 public class WeatherUpdaterFunction implements BackgroundFunction<Consumer.PubSubMessage> {
 

@@ -7,4 +7,6 @@ public interface ProjectInfo {
 
   String BIG_QUERY_DATASET_NAME = "sensors";
   String BIG_QUERY_TABLE_NAME = "sensor";
+
+  String QUEUE_ID = "power-unit-queue";
 }

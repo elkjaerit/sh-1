@@ -87,8 +87,8 @@ public class SensorUpdater {
 
   private static boolean sensorDataIsOutdated(QueryDocumentSnapshot roomSnap) {
     Timestamp timestamp = roomSnap.getTimestamp("sensor.lastUpdated");
-    return timestamp != null
-        && Timestamp.now().getSeconds() - timestamp.getSeconds() > UPDATE_INTERVAL_SECONDS;
+    return timestamp == null
+        || Timestamp.now().getSeconds() - timestamp.getSeconds() > UPDATE_INTERVAL_SECONDS;
   }
 
   private static void updateRoomSensorData(QueryDocumentSnapshot room, SensorData sensorData) {

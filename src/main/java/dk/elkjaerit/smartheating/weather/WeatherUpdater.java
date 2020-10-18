@@ -1,17 +1,18 @@
-package dk.elkjaerit.smartheating;
+package dk.elkjaerit.smartheating.weather;
 
-import com.google.cloud.firestore.CollectionReference;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.protobuf.Timestamp;
+import dk.elkjaerit.smartheating.BuildingRepository;
+import dk.elkjaerit.smartheating.CloudTask;
 import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.DigitalOutput;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview;
 import dk.elkjaerit.smartheating.common.model.Room;
 import dk.elkjaerit.smartheating.ml.Predictor;
-import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
-import dk.elkjaerit.smartheating.weather.WeatherForecast;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Comparator;
@@ -24,12 +25,27 @@ import java.util.logging.Logger;
 public class WeatherUpdater {
   private static final Logger LOGGER = Logger.getLogger(WeatherUpdater.class.getName());
 
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
     run();
   }
 
-  public static void run() {
-    BuildingRepository.getBuildings().forEach(WeatherUpdater::updateBuilding);
+  public static void run() throws IOException {
+    CloudTask.clearAll();
+    BuildingRepository.getBuildings()
+        .forEach(
+            buildingSnapshot -> {
+              updateBuilding(buildingSnapshot);
+              try {
+                CloudTask.scheduleTask(
+                    buildingSnapshot.getId(),
+                    Timestamp.newBuilder()
+                        .setSeconds(Instant.now().plusSeconds(30).getEpochSecond())
+                        .build());
+              } catch (IOException e) {
+                throw new IllegalStateException(
+                    "Could not schedule cloud task after weather update.");
+              }
+            });
   }
 
   private static void updateBuilding(QueryDocumentSnapshot buildingSnapshot) {
@@ -65,29 +81,34 @@ public class WeatherUpdater {
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
     LOGGER.info("Prediction: " + room.getName() + ": " + predictedLabel);
 
-    double power;
-
     if (predictedLabel == PredictionOverview.Label.NEGATIVE) {
-      room.getDigitalOutput().setPower(0);
+      room.getDigitalOutput().updatePower(0);
     } else {
-      power = calculateFromWeatherForecast(weatherForecast, room);
-      double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
-      double powerForRoom = Math.max(minimumPowerForRoom, Math.min(1, power));
-      double adjustedForNight = adjustForNight(powerForRoom);
 
-      if (room.getSensor().getTemperature()>25.0){
+      double weatherCalculatedPower = calculateFromWeatherForecast(weatherForecast, room);
+      weatherCalculatedPower = Math.min(1, weatherCalculatedPower);
+
+      double tempAdjustedPower;
+      if (room.getSensor().getTemperature() > 25.0) {
         LOGGER.info("Temp (very) too high - set to 0!");
-        adjustedForNight = 0;
-      } else if (room.getSensor().getTemperature()>24.5){
+        tempAdjustedPower = 0;
+      } else if (room.getSensor().getTemperature() > 24.5) {
         LOGGER.info("Temp too high - use only half of calculated!");
-        adjustedForNight = .5 * adjustedForNight;
+        tempAdjustedPower = .5 * weatherCalculatedPower;
+      } else {
+        tempAdjustedPower = weatherCalculatedPower;
       }
 
-      room.getDigitalOutput().updatePower(adjustedForNight);
+      double adjustedForNight = adjustForNight(tempAdjustedPower);
+      double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
+      double adjusterForMinimum = Math.max(minimumPowerForRoom, adjustedForNight);
+      room.getDigitalOutput().updatePower(adjusterForMinimum);
     }
 
-    LOGGER.info("Power for room: " + room.getDigitalOutput().getPower());
-    roomQueryDocumentSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput()));
+    LOGGER.info("Power for '" + room.getName() + "': " + room.getDigitalOutput().getPower());
+    roomQueryDocumentSnapshot
+        .getReference()
+        .update(Map.of("digitalOutput", room.getDigitalOutput()));
   }
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {

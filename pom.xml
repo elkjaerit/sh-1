@@ -78,6 +78,11 @@
             <artifactId>solarpositioning</artifactId>
             <version>0.0.9</version> <!-- or whatever latest release is -->
         </dependency>
+        <dependency>
+            <groupId>com.google.cloud</groupId>
+            <artifactId>google-cloud-tasks</artifactId>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/commons-io/commons-io -->
         <dependency>
             <groupId>commons-io</groupId>

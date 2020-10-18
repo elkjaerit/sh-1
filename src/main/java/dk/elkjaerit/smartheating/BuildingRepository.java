@@ -39,6 +39,10 @@ public class BuildingRepository {
     }
   }
 
+  public static DocumentReference getBuilding(String buildingId) {
+      return db.document("buildings/" + buildingId);
+  }
+
   public static Optional<QueryDocumentSnapshot> getBuildingByGatewayId(String gatewayId) {
     ApiFuture<QuerySnapshot> querySnapshotApiFuture =
         db.collection("buildings").whereArrayContains("gatewayIds", gatewayId).get();
@@ -49,22 +53,24 @@ public class BuildingRepository {
     }
   }
 
-  public static List<QueryDocumentSnapshot> getRooms(String gatewayId) throws InterruptedException, ExecutionException {
+  public static List<QueryDocumentSnapshot> getRooms(String gatewayId)
+      throws InterruptedException, ExecutionException {
     return BuildingRepository.getBuildingByGatewayId(gatewayId)
-            .get()
-            .getReference()
-            .collection("rooms")
-            .get()
-            .get()
-            .getDocuments();
+        .get()
+        .getReference()
+        .collection("rooms")
+        .get()
+        .get()
+        .getDocuments();
   }
 
-  public static Optional<QueryDocumentSnapshot> getRoomBySensorId(DocumentReference building, String sensorId){
+  public static Optional<QueryDocumentSnapshot> getRoomBySensorId(
+      DocumentReference building, String sensorId) {
 
     Query query = building.collection("rooms").whereEqualTo("sensorId", sensorId);
     try {
       List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
-      if (documents.size()>1) {
+      if (documents.size() > 1) {
         throw new IllegalArgumentException("Found too many rooms");
       }
       return documents.stream().findFirst();
@@ -74,7 +80,5 @@ public class BuildingRepository {
     }
 
     return Optional.empty();
-
   }
-
 }
