@@ -1,8 +1,6 @@
 package dk.elkjaerit.smartheating.ml;
 
 import com.google.cloud.bigquery.*;
-import dk.elkjaerit.smartheating.BuildingRepository;
-import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview.Label;
 import dk.elkjaerit.smartheating.common.model.Room;
@@ -10,7 +8,6 @@ import dk.elkjaerit.smartheating.weather.WeatherForecast;
 import org.apache.commons.io.IOUtils;
 
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,7 +33,9 @@ public class Predictor {
 
       PredictionOverview build = createResult(job);
       LOG.info("" + build);
-      return build.getResult();
+      Label result = build.getResult();
+      LOG.info("Prediction for '" + room.getName() + "': " + result);
+      return result;
     } catch (Exception e) {
       LOG.log(Level.SEVERE, "Could not make prediction for room " + room.getName());
       return Label.POSITIVE;

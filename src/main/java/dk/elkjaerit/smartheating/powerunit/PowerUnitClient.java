@@ -24,19 +24,18 @@ public class PowerUnitClient {
   private static final JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
   private static GoogleCredentials credential;
 
+  private static final CloudIot service;
+
   static {
     try {
       credential = GoogleCredentials.getApplicationDefault().createScoped(CloudIotScopes.all());
-    } catch (IOException e) {
-      e.printStackTrace();
+      service = getCloudIot();
+    } catch (IOException | GeneralSecurityException e) {
+      throw new RuntimeException("Could no start", e);
     }
   }
 
-  public static void sendCommand(String deviceId, String data)
-      throws GeneralSecurityException, IOException {
-
-    final CloudIot service = getCloudIot();
-
+  public static void sendCommand(String deviceId, String data) throws IOException {
     final String devicePath =
         String.format(
             "projects/%s/locations/%s/registries/%s/devices/%s",
@@ -50,18 +49,18 @@ public class PowerUnitClient {
             .locations()
             .registries()
             .devices()
-
-                .sendCommandToDevice(devicePath, req)
+            .sendCommandToDevice(devicePath, req)
             .execute();
   }
 
-  public static void sendConfiguration(String deviceId, String data) throws GeneralSecurityException, IOException {
+  public static void sendConfiguration(String deviceId, String data)
+      throws GeneralSecurityException, IOException {
     final CloudIot service = getCloudIot();
 
     final String devicePath =
-            String.format(
-                    "projects/%s/locations/%s/registries/%s/devices/%s",
-                    ProjectInfo.PROJECT_ID, ProjectInfo.CLOUD_REGION, ProjectInfo.REGISTRY_NAME, deviceId);
+        String.format(
+            "projects/%s/locations/%s/registries/%s/devices/%s",
+            ProjectInfo.PROJECT_ID, ProjectInfo.CLOUD_REGION, ProjectInfo.REGISTRY_NAME, deviceId);
 
     ModifyCloudToDeviceConfigRequest req = new ModifyCloudToDeviceConfigRequest();
     Base64.Encoder encoder = Base64.getEncoder();
@@ -69,16 +68,16 @@ public class PowerUnitClient {
     req.setBinaryData(encPayload);
 
     service
-            .projects()
-            .locations()
-            .registries()
-            .devices()
-            .modifyCloudToDeviceConfig(devicePath, req)
-            .execute();
+        .projects()
+        .locations()
+        .registries()
+        .devices()
+        .modifyCloudToDeviceConfig(devicePath, req)
+        .execute();
   }
 
-
-  private static SendCommandToDeviceRequest buildRequest(String data) throws UnsupportedEncodingException {
+  private static SendCommandToDeviceRequest buildRequest(String data)
+      throws UnsupportedEncodingException {
     SendCommandToDeviceRequest req = new SendCommandToDeviceRequest();
 
     // Data sent through the wire has to be base64 encoded.

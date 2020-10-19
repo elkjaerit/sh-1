@@ -76,33 +76,42 @@ public class WeatherUpdater {
     if (room.getDigitalOutput() == null) {
       room.setDigitalOutput(DigitalOutput.builder().build());
     }
-    LOGGER.info("Updating room : " + room.getName());
 
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
-    LOGGER.info("Prediction: " + room.getName() + ": " + predictedLabel);
 
     if (predictedLabel == PredictionOverview.Label.NEGATIVE) {
       room.getDigitalOutput().updatePower(0);
     } else {
 
+      // Calculate from weather
       double weatherCalculatedPower = calculateFromWeatherForecast(weatherForecast, room);
       weatherCalculatedPower = Math.min(1, weatherCalculatedPower);
 
+      // Use minimum
+      double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
+      double adjusterForMinimum = Math.max(minimumPowerForRoom, weatherCalculatedPower);
+
+      // Adjust for too high temps
       double tempAdjustedPower;
       if (room.getSensor().getTemperature() > 25.0) {
-        LOGGER.info("Temp (very) too high - set to 0!");
-        tempAdjustedPower = 0;
+        if (minimumPowerForRoom > 0) {
+          tempAdjustedPower = adjusterForMinimum * 0.5;
+        } else {
+          tempAdjustedPower = 0;
+        }
       } else if (room.getSensor().getTemperature() > 24.5) {
-        LOGGER.info("Temp too high - use only half of calculated!");
-        tempAdjustedPower = .5 * weatherCalculatedPower;
+        if (minimumPowerForRoom > 0) {
+          tempAdjustedPower = adjusterForMinimum;
+        } else {
+          tempAdjustedPower = adjusterForMinimum * 0.5;
+        }
       } else {
-        tempAdjustedPower = weatherCalculatedPower;
+        tempAdjustedPower = adjusterForMinimum;
       }
 
       double adjustedForNight = adjustForNight(tempAdjustedPower);
-      double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
-      double adjusterForMinimum = Math.max(minimumPowerForRoom, adjustedForNight);
-      room.getDigitalOutput().updatePower(adjusterForMinimum);
+
+      room.getDigitalOutput().updatePower(adjustedForNight);
     }
 
     LOGGER.info("Power for '" + room.getName() + "': " + room.getDigitalOutput().getPower());
