@@ -5,18 +5,14 @@ import com.google.protobuf.Timestamp;
 import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.CloudTask;
 import dk.elkjaerit.smartheating.common.model.Building;
-import dk.elkjaerit.smartheating.common.model.DigitalOutput;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview;
 import dk.elkjaerit.smartheating.common.model.Room;
 import dk.elkjaerit.smartheating.ml.Predictor;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
@@ -52,7 +48,8 @@ public class WeatherUpdater {
     LOGGER.info("Update building");
     try {
       Building building = buildingSnapshot.toObject(Building.class);
-      WeatherForecast weatherForecast = getActualWeatherForecast(building, getPredictionTimer());
+      WeatherForecast weatherForecast =
+          OpenWeatherMapClient.getActualWeatherForecast(building, getPredictionTimer());
       LOGGER.info("Weather forecast: " + weatherForecast);
       buildingSnapshot
           .getReference()
@@ -73,45 +70,13 @@ public class WeatherUpdater {
       QueryDocumentSnapshot roomQueryDocumentSnapshot, WeatherForecast weatherForecast) {
 
     Room room = roomQueryDocumentSnapshot.toObject(Room.class);
-    if (room.getDigitalOutput() == null) {
-      room.setDigitalOutput(DigitalOutput.builder().build());
-    }
 
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
 
     if (predictedLabel == PredictionOverview.Label.NEGATIVE) {
       room.getDigitalOutput().updatePower(0);
     } else {
-
-      // Calculate from weather
-      double weatherCalculatedPower = calculateFromWeatherForecast(weatherForecast, room);
-      weatherCalculatedPower = Math.min(1, weatherCalculatedPower);
-
-      // Use minimum
-      double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
-      double adjusterForMinimum = Math.max(minimumPowerForRoom, weatherCalculatedPower);
-
-      // Adjust for too high temps
-      double tempAdjustedPower;
-      if (room.getSensor().getTemperature() > 25.0) {
-        if (minimumPowerForRoom > 0) {
-          tempAdjustedPower = adjusterForMinimum * 0.5;
-        } else {
-          tempAdjustedPower = 0;
-        }
-      } else if (room.getSensor().getTemperature() > 24.5) {
-        if (minimumPowerForRoom > 0) {
-          tempAdjustedPower = adjusterForMinimum;
-        } else {
-          tempAdjustedPower = adjusterForMinimum * 0.5;
-        }
-      } else {
-        tempAdjustedPower = adjusterForMinimum;
-      }
-
-      double adjustedForNight = adjustForNight(tempAdjustedPower);
-
-      room.getDigitalOutput().updatePower(adjustedForNight);
+      updateFromWeatherForecast(weatherForecast, room);
     }
 
     LOGGER.info("Power for '" + room.getName() + "': " + room.getDigitalOutput().getPower());
@@ -120,10 +85,26 @@ public class WeatherUpdater {
         .update(Map.of("digitalOutput", room.getDigitalOutput()));
   }
 
+  private static void updateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
+    // Calculate from weather
+    double power = calculateFromWeatherForecast(weatherForecast, room);
+
+    // Use minimum
+    double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
+    double adjusterForMinimum = Math.max(minimumPowerForRoom, power);
+
+    double tempAdjusted = adjusterForMinimum * room.getTempAdjustFactor();
+
+    double adjustedForNight = adjustForNight(tempAdjusted);
+
+    room.getDigitalOutput().updatePower(adjustedForNight);
+  }
+
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
     double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
     double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 10;
-    return 1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
+    double calculatedValue = 1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
+    return Math.min(1, calculatedValue);
   }
 
   private static double adjustForNight(double powerForRoom) {
@@ -136,19 +117,7 @@ public class WeatherUpdater {
     }
   }
 
-  private static WeatherForecast getActualWeatherForecast(
-      Building building, ZonedDateTime predictionTimer) throws IOException, InterruptedException {
-    List<WeatherForecast> forecast = OpenWeatherMapClient.getForecast(building);
-    return forecast.stream()
-        .min(Comparator.comparing(o -> absDiff(predictionTimer, o)))
-        .orElseThrow(() -> new IllegalStateException("Could not find weather."));
-  }
-
   private static ZonedDateTime getPredictionTimer() {
     return ZonedDateTime.now(ZoneId.of("Europe/Copenhagen")).plusHours(6);
-  }
-
-  private static Long absDiff(ZonedDateTime now, WeatherForecast o1) {
-    return Math.abs(Duration.between(now, o1.getDateTime()).toSeconds());
   }
 }

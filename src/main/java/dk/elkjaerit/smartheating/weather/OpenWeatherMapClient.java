@@ -14,14 +14,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.*;
+import java.util.*;
 import java.util.logging.Logger;
 
 public class OpenWeatherMapClient {
@@ -47,7 +41,17 @@ public class OpenWeatherMapClient {
     }
   }
 
-  public static List<WeatherForecast> getForecast(Building building)
+  static WeatherForecast getActualWeatherForecast(Building building, ZonedDateTime forecastTime)
+      throws IOException, InterruptedException {
+
+    return getForecast(building).stream()
+        .min(
+            Comparator.comparing(
+                o -> Math.abs(Duration.between(forecastTime, o.getDateTime()).toSeconds())))
+        .orElseThrow(() -> new IllegalStateException("Could not find weather."));
+  }
+
+  private static List<WeatherForecast> getForecast(Building building)
       throws IOException, InterruptedException {
     var client = HttpClient.newHttpClient();
     var httpRequest =
