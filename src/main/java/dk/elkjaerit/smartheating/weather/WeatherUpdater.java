@@ -102,14 +102,14 @@ public class WeatherUpdater {
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
     double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
-    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 10;
+    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 15;
     double calculatedValue = 1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
     return Math.min(1, calculatedValue);
   }
 
   private static double adjustForNight(double powerForRoom) {
     ZonedDateTime zonedDateTime = getPredictionTimer();
-    if (zonedDateTime.getHour() > 20 || zonedDateTime.getHour() < 5) {
+    if (zonedDateTime.getHour() > 22 || zonedDateTime.getHour() < 4) {
       LOGGER.info("Adjusted for night");
       return powerForRoom * 0.25;
     } else {
