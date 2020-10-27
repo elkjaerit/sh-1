@@ -105,7 +105,7 @@ public class PowerUnitUpdater {
   @SneakyThrows
   private static void updateRoom(QueryDocumentSnapshot roomSnapshot) {
     Room room = roomSnapshot.toObject(Room.class);
-    room.getDigitalOutput().update(3600);
+    room.getDigitalOutput().update(1800);
     roomSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput())).get();
     LOG.info("Room updated: " + room.getName() + ", digitalOutput: " + room.getDigitalOutput());
   }
