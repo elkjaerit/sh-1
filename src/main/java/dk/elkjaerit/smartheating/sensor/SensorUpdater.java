@@ -7,7 +7,6 @@ import dk.elkjaerit.smartheating.BigQueryRepository;
 import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.common.model.Building;
 import dk.elkjaerit.smartheating.common.model.Room;
-import dk.elkjaerit.smartheating.common.model.Sensor;
 import dk.elkjaerit.smartheating.common.model.SensorData;
 import dk.elkjaerit.smartheating.weather.OpenWeatherMapClient;
 import dk.elkjaerit.smartheating.weather.Weather;
@@ -23,20 +22,6 @@ public class SensorUpdater {
 
   private static final int UPDATE_INTERVAL_SECONDS = 60;
   private static final Gson gson = new Gson();
-
-  public static void main(String[] args) throws ExecutionException, InterruptedException {
-    String batteryJson =
-        "  {\"deviceId\": \"B93A7D80\", \"mac\": \"58:2D:34:35:CB:89\", \"batt\": 15.0, \"rssi\": -77, \"timestamp\": 0}";
-
-    String temperatureJson =
-        "{\"deviceId\": \"B93A7D80\", \"mac\": \"58:2D:34:35:CB:89\", \"temp\": 25.9, \"humidity\": 46.1, \"rssi\": -77, \"timestamp\": 1602520380}";
-
-    SensorData batterySensor = gson.fromJson(batteryJson, SensorData.class);
-    SensorData temperature = gson.fromJson(temperatureJson, SensorData.class);
-
-    updateSensorData(batterySensor);
-    updateSensorData(temperature);
-  }
 
   public static void updateSensorData(SensorData sensorData)
       throws ExecutionException, InterruptedException {
