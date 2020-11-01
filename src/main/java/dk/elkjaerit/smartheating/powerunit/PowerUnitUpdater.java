@@ -1,5 +1,6 @@
 package dk.elkjaerit.smartheating.powerunit;
 
+import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import dk.elkjaerit.smartheating.BuildingRepository;
@@ -18,7 +19,8 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 public class PowerUnitUpdater {
 
@@ -44,24 +46,19 @@ public class PowerUnitUpdater {
 
   private static void updateBuilding(DocumentReference building) {
     try {
-      updateRooms(building);
-
-      List<Room> rooms =
-              building.collection("rooms").get().get().getDocuments().stream()
-                      .map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class))
-                      .collect(Collectors.toList());
-
-      sendMessageToPowerUnit(rooms);
-      createTask(building, rooms);
+      List<Room> roomsAfterUpdate = updateRooms(building);
+      sendMessageToPowerUnit(roomsAfterUpdate);
+      createTask(building, roomsAfterUpdate);
 
     } catch (InterruptedException | ExecutionException | IOException e) {
       LOG.log(Level.SEVERE, "Error updating power unit", e);
     }
   }
 
-  private static void createTask(DocumentReference building, List<Room> rooms) throws IOException {
+  private static void createTask(DocumentReference building, List<Room> nextUpdate)
+      throws IOException {
     Optional<Room> nextRoomToBeUpdated =
-        rooms.stream()
+            nextUpdate.stream()
             .filter(room -> room.getDigitalOutput().getNextToggleTime() != null)
             .min(Comparator.comparing(o -> o.getDigitalOutput().getNextToggleTime()));
 
@@ -81,10 +78,11 @@ public class PowerUnitUpdater {
     }
   }
 
-  private static void updateRooms(DocumentReference building) throws InterruptedException, ExecutionException {
+  private static List<Room> updateRooms(DocumentReference building)
+      throws InterruptedException, ExecutionException {
     List<QueryDocumentSnapshot> roomSnapshotList =
         building.collection("rooms").get().get().getDocuments();
-    roomSnapshotList.forEach(PowerUnitUpdater::updateRoom);
+    return roomSnapshotList.stream().map(PowerUnitUpdater::updateRoom).collect(toList());
   }
 
   private static void sendMessageToPowerUnit(List<Room> rooms) {
@@ -103,11 +101,12 @@ public class PowerUnitUpdater {
   }
 
   @SneakyThrows
-  private static void updateRoom(QueryDocumentSnapshot roomSnapshot) {
+  private static Room updateRoom(QueryDocumentSnapshot roomSnapshot) {
     Room room = roomSnapshot.toObject(Room.class);
     room.getDigitalOutput().update(1800);
-    roomSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput())).get();
+    roomSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput()));
     LOG.info("Room updated: " + room.getName() + ", digitalOutput: " + room.getDigitalOutput());
+    return room;
   }
 
   private static int getStateAsBinary(List<Room> rooms) {

@@ -16,6 +16,7 @@ public class Room {
   private Double minPower;
   private Double tempLower;
   private Double tempUpper;
+  private Double preferredTemp;
   private Boolean night;
   private Sensor sensor;
   private DigitalOutput digitalOutput;
@@ -28,15 +29,18 @@ public class Room {
   }
 
   public double getTempAdjustFactor() {
-    double preferred = 24d;
+    if (preferredTemp == null) {
+      return 1;
+    }
+    double tempDiff = sensor.getTemperature() - preferredTemp;
 
-    if (sensor.getTemperature() - preferred > 1) {
+    if (tempDiff > 2) {
       if (minPower != null) {
         return 0.5;
       } else {
         return 0;
       }
-    } else if (sensor.getTemperature() - preferred > 0.5) {
+    } else if (tempDiff > 1) {
       if (minPower != null) {
         return 1;
       } else {

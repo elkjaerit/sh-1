@@ -23,7 +23,7 @@ public class PredictionOverview {
               .map(resultRow -> resultRow.prohibition)
               .findFirst()
               .orElseThrow(IllegalArgumentException::new);
-      if (negativeProhibition > 0.65) {
+      if (negativeProhibition > 0.55) {
         return Label.NEGATIVE;
       }
     }

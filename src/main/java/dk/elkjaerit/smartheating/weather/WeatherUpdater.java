@@ -79,7 +79,7 @@ public class WeatherUpdater {
       updateFromWeatherForecast(weatherForecast, room);
     }
 
-    LOGGER.info("Power for '" + room.getName() + "': " + room.getDigitalOutput().getPower());
+    LOGGER.info("Power for '" + room.getName() + "': " + room.getDigitalOutput().getPower() + ". Current temp: " + room.getSensor().getTemperature()) ;
     roomQueryDocumentSnapshot
         .getReference()
         .update(Map.of("digitalOutput", room.getDigitalOutput()));
