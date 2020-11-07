@@ -74,12 +74,22 @@ public class WeatherUpdater {
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
 
     if (predictedLabel == PredictionOverview.Label.NEGATIVE) {
-      room.getDigitalOutput().updatePower(0);
+      if (room.getMinPower() != null) {
+        room.getDigitalOutput().updatePower(room.getMinPower() / 2);
+      } else {
+        room.getDigitalOutput().updatePower(0);
+      }
     } else {
       updateFromWeatherForecast(weatherForecast, room);
     }
 
-    LOGGER.info("Power for '" + room.getName() + "': " + room.getDigitalOutput().getPower() + ". Current temp: " + room.getSensor().getTemperature()) ;
+    LOGGER.info(
+        "Power for '"
+            + room.getName()
+            + "': "
+            + room.getDigitalOutput().getPower()
+            + ". Current temp: "
+            + room.getSensor().getTemperature());
     roomQueryDocumentSnapshot
         .getReference()
         .update(Map.of("digitalOutput", room.getDigitalOutput()));
@@ -102,7 +112,7 @@ public class WeatherUpdater {
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
     double minTemp = room.getTempLower() != null ? room.getTempLower() : -5;
-    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 15;
+    double maxTemp = room.getTempUpper() != null ? room.getTempUpper() : 10;
     double calculatedValue = 1 - ((weatherForecast.getTemp() - minTemp) / (maxTemp - minTemp));
     return Math.min(1, calculatedValue);
   }

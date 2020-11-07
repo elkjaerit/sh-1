@@ -8,7 +8,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@Data
+@Getter
 @ToString
 public class DigitalOutput {
 

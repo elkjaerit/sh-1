@@ -44,11 +44,25 @@ public class OpenWeatherMapClient {
   static WeatherForecast getActualWeatherForecast(Building building, ZonedDateTime forecastTime)
       throws IOException, InterruptedException {
 
-    return getForecast(building).stream()
-        .min(
-            Comparator.comparing(
-                o -> Math.abs(Duration.between(forecastTime, o.getDateTime()).toSeconds())))
-        .orElseThrow(() -> new IllegalStateException("Could not find weather."));
+    WeatherForecast weatherForecast = getForecast(building).stream()
+            .min(
+                    Comparator.comparing(
+                            o -> Math.abs(Duration.between(forecastTime, o.getDateTime()).toSeconds())))
+            .orElseThrow(() -> new IllegalStateException("Could not find weather."));
+
+    AzimuthZenithAngle azimuthAndZenithAngle =
+            Sun.getAzimuthAndZenithAngle(
+                    building.getLocation().getLatitude(), building.getLocation().getLongitude(), forecastTime);
+
+    return WeatherForecast.builder()
+            .dateTime(weatherForecast.getDateTime())
+            .cloudCover(weatherForecast.getCloudCover())
+            .windDirection(weatherForecast.getWindDirection())
+            .temp(weatherForecast.getTemp())
+            .windSpeed(weatherForecast.getWindSpeed())
+            .azimuth(azimuthAndZenithAngle.getAzimuth())
+            .zenith(azimuthAndZenithAngle.getZenithAngle())
+            .build();
   }
 
   private static List<WeatherForecast> getForecast(Building building)
@@ -80,9 +94,6 @@ public class OpenWeatherMapClient {
               ZonedDateTime.ofInstant(
                   Instant.ofEpochSecond(current.get("dt").getAsLong()),
                   ZoneId.of("Europe/Copenhagen"));
-          AzimuthZenithAngle azimuthAndZenithAngle =
-              Sun.getAzimuthAndZenithAngle(
-                  building.getLocation().getLatitude(), building.getLocation().getLongitude(), dt);
 
           WeatherForecast weatherForecast =
               WeatherForecast.builder()
@@ -91,8 +102,6 @@ public class OpenWeatherMapClient {
                   .temp(current.getAsJsonObject("main").get("temp").getAsDouble())
                   .windDirection(current.getAsJsonObject("wind").get("deg").getAsInt())
                   .windSpeed(current.getAsJsonObject("wind").get("speed").getAsDouble())
-                  .azimuth(azimuthAndZenithAngle.getAzimuth())
-                  .zenith(azimuthAndZenithAngle.getZenithAngle())
                   .build();
           result.add(weatherForecast);
         });
