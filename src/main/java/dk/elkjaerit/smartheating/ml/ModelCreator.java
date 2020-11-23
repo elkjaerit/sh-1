@@ -29,11 +29,10 @@ public class ModelCreator {
 
   public static void create(String gatewayId) throws ExecutionException, InterruptedException {
     getRooms(gatewayId)
-        .forEach(
-            roomDocumentSnapshot -> {
-              Room room = roomDocumentSnapshot.toObject(Room.class);
-              buildModelForRoom(room);
-            });
+            .stream()
+            .map(queryDocumentSnapshot -> queryDocumentSnapshot.toObject(Room.class))
+           // .filter(room -> room.getName().equals("Ida"))
+            .forEach(ModelCreator::buildModelForRoom);
   }
 
   private static void buildModelForRoom(Room room) {

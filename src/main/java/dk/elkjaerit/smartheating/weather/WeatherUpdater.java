@@ -96,18 +96,17 @@ public class WeatherUpdater {
   }
 
   private static void updateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
-    // Calculate from weather
+    // Calculate from weather and set value
     double power = calculateFromWeatherForecast(weatherForecast, room);
-
-    // Use minimum
     double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
     double adjusterForMinimum = Math.max(minimumPowerForRoom, power);
 
     double tempAdjusted = adjusterForMinimum * room.getTempAdjustFactor();
-
     double adjustedForNight = adjustForNight(tempAdjusted);
 
-    room.getDigitalOutput().updatePower(adjustedForNight);
+    double halfPowerAsLowest = Math.max(minimumPowerForRoom * 0.5, adjustedForNight);
+
+    room.getDigitalOutput().updatePower(halfPowerAsLowest);
   }
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
@@ -121,7 +120,7 @@ public class WeatherUpdater {
     ZonedDateTime zonedDateTime = getPredictionTimer();
     if (zonedDateTime.getHour() > 22 || zonedDateTime.getHour() < 4) {
       LOGGER.info("Adjusted for night");
-      return powerForRoom * 0.25;
+      return powerForRoom * 0.5;
     } else {
       return powerForRoom;
     }

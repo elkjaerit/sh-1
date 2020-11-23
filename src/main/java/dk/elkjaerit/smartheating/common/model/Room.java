@@ -36,15 +36,15 @@ public class Room {
 
     if (tempDiff > 2) {
       if (minPower != null) {
-        return 0.5;
+        return 0.25;
       } else {
         return 0;
       }
     } else if (tempDiff > 1) {
       if (minPower != null) {
-        return 1;
-      } else {
         return 0.5;
+      } else {
+        return 0.25;
       }
     } else {
       return 1;

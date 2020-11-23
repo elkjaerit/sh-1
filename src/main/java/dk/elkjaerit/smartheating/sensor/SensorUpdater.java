@@ -17,11 +17,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Logger;
 
 public class SensorUpdater {
 
   private static final int UPDATE_INTERVAL_SECONDS = 60;
-  private static final Gson gson = new Gson();
+  private static final Logger logger = Logger.getLogger(SensorUpdater.class.getName());
 
   public static void updateSensorData(SensorData sensorData)
       throws ExecutionException, InterruptedException {
@@ -48,6 +49,8 @@ public class SensorUpdater {
       } else {
         updateTempAndHumidity(sensorData, roomSnapshot);
       }
+    } else {
+      logger.info("Could not find room for sensordata: " + sensorData);
     }
   }
 
