@@ -27,7 +27,7 @@ public class PowerUnitUpdater {
   private static final Logger LOG = Logger.getLogger(PowerUnitUpdater.class.getName());
 
   public static void main(String[] args) {
-    update("bbd508c9-42aa-4bc5-9981-a5b523d65aca");
+    update("zFxF99apN2rQJfvJIIiD");
   }
 
   public static void update() {
@@ -47,7 +47,7 @@ public class PowerUnitUpdater {
   private static void updateBuilding(DocumentReference building) {
     try {
       List<Room> roomsAfterUpdate = updateRooms(building);
-      sendMessageToPowerUnit(roomsAfterUpdate);
+      sendMessageToPowerUnit(building.get().get().getString("powerUnitId"), roomsAfterUpdate);
       createTask(building, roomsAfterUpdate);
 
     } catch (InterruptedException | ExecutionException | IOException e) {
@@ -85,10 +85,10 @@ public class PowerUnitUpdater {
     return roomSnapshotList.stream().map(PowerUnitUpdater::updateRoom).collect(toList());
   }
 
-  private static void sendMessageToPowerUnit(List<Room> rooms) {
+  private static void sendMessageToPowerUnit(String powerUnitId, List<Room> rooms) {
     try {
       int state = getStateAsBinary(rooms);
-      PowerUnitClient.sendConfiguration("power-unit-device", String.valueOf(state));
+      PowerUnitClient.sendConfiguration(powerUnitId, String.valueOf(state));
       LOG.info(
           "Updating power unit State: "
               + StringUtils.leftPad(Integer.toBinaryString(state), 10, "0")
@@ -103,7 +103,7 @@ public class PowerUnitUpdater {
   @SneakyThrows
   private static Room updateRoom(QueryDocumentSnapshot roomSnapshot) {
     Room room = roomSnapshot.toObject(Room.class);
-    room.getDigitalOutput().update(1800);
+    room.getDigitalOutput().update(3600);
     roomSnapshot.getReference().update(Map.of("digitalOutput", room.getDigitalOutput()));
     LOG.info("Room updated: " + room.getName() + ", digitalOutput: " + room.getDigitalOutput());
     return room;

@@ -89,7 +89,7 @@ public class WeatherUpdater {
             + "': "
             + room.getDigitalOutput().getPower()
             + ". Current temp: "
-            + room.getSensor().getTemperature());
+            + (room.getSensor() !=null  ? room.getSensor().getTemperature() : "N/A"));
     roomQueryDocumentSnapshot
         .getReference()
         .update(Map.of("digitalOutput", room.getDigitalOutput()));

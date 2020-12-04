@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static dk.elkjaerit.smartheating.BuildingRepository.getRooms;
@@ -56,7 +57,7 @@ public class ModelCreator {
       //      }
       LOG.info("Job " + jobId.getJob() + " created for " + room.getName());
     } catch (IOException | InterruptedException | URISyntaxException | BigQueryException e) {
-      e.printStackTrace();
+      LOG.log(Level.SEVERE, "Error creating ML Model for " + room.getName(), e);
     }
   }
 

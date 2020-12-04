@@ -29,7 +29,7 @@ public class Room {
   }
 
   public double getTempAdjustFactor() {
-    if (preferredTemp == null) {
+    if (preferredTemp == null || sensor == null || sensor.getTemperature() == null) {
       return 1;
     }
     double tempDiff = sensor.getTemperature() - preferredTemp;
@@ -46,8 +46,12 @@ public class Room {
       } else {
         return 0.25;
       }
-    } else {
+    } else if (tempDiff < 1 && tempDiff > -1) {
       return 1;
+    } else if (tempDiff < -2) {
+      return 1.5;
+    } else {
+      return 1.25;
     }
   }
 }
