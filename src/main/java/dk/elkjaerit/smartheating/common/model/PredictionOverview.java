@@ -16,18 +16,16 @@ public class PredictionOverview {
 
   public Label getResult() {
     if (calculated == Label.POSITIVE) {
-      return Label.POSITIVE;
-    } else {
       double negativeProhibition = results.stream()
-              .filter(resultRow -> resultRow.label == Label.NEGATIVE)
+              .filter(resultRow -> resultRow.label == Label.POSITIVE)
               .map(resultRow -> resultRow.prohibition)
               .findFirst()
               .orElseThrow(IllegalArgumentException::new);
       if (negativeProhibition > 0.55) {
-        return Label.NEGATIVE;
+        return Label.POSITIVE;
       }
     }
-    return Label.POSITIVE;
+    return Label.NEGATIVE;
   }
 
   @Value
@@ -38,8 +36,8 @@ public class PredictionOverview {
   }
 
   public enum Label {
-    POSITIVE("NONE"),
-    NEGATIVE("HIGH_INC");
+    POSITIVE("1"),
+    NEGATIVE("0");
 
     private final String value;
 

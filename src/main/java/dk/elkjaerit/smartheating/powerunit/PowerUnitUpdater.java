@@ -27,7 +27,7 @@ public class PowerUnitUpdater {
   private static final Logger LOG = Logger.getLogger(PowerUnitUpdater.class.getName());
 
   public static void main(String[] args) {
-    update("zFxF99apN2rQJfvJIIiD");
+    update("bbd508c9-42aa-4bc5-9981-a5b523d65aca");
   }
 
   public static void update() {

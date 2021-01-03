@@ -2,7 +2,6 @@ package dk.elkjaerit.smartheating.sensor;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
-import com.google.gson.Gson;
 import dk.elkjaerit.smartheating.BigQueryRepository;
 import dk.elkjaerit.smartheating.BuildingRepository;
 import dk.elkjaerit.smartheating.common.model.Building;
@@ -64,7 +63,7 @@ public class SensorUpdater {
       throws ExecutionException, InterruptedException {
     if (sensorDataIsOutdated(roomSnapshot)) {
       Building building =
-              roomSnapshot.getReference().getParent().getParent().get().get().toObject(Building.class);
+          roomSnapshot.getReference().getParent().getParent().get().get().toObject(Building.class);
       Weather currentWeather = OpenWeatherMapClient.getCurrentWeather(building);
       Map<String, Object> rowContent =
           createRowFromJson(sensorData, currentWeather, roomSnapshot.toObject(Room.class));
@@ -107,6 +106,9 @@ public class SensorUpdater {
     rowContent.put("wind_direction", currentWeaher.getWindDirection());
     rowContent.put("humidity", sensorData.getHumidity());
     rowContent.put("rssi", sensorData.getRssi());
+    if (room.getDigitalOutput() != null) {
+      rowContent.put("power", room.getDigitalOutput().getPower());
+    }
     rowContent.put(
         "azimuth", new BigDecimal(currentWeaher.getAzimuth()).setScale(2, RoundingMode.HALF_UP));
     rowContent.put(

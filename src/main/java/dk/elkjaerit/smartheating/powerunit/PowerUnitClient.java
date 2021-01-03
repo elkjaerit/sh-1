@@ -18,6 +18,7 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.util.Base64;
+import java.util.stream.IntStream;
 
 public class PowerUnitClient {
 
@@ -33,6 +34,26 @@ public class PowerUnitClient {
     } catch (IOException | GeneralSecurityException e) {
       throw new RuntimeException("Could no start", e);
     }
+  }
+
+  public static void main(String[] args) throws GeneralSecurityException, IOException {
+
+    IntStream.range(0,8).forEach(value -> {
+      try {
+
+        System.out.println(Math.pow(2,value));
+        sendConfiguration("power-unit-soren", "" + Math.pow(2,value));
+        Thread.sleep(1100);
+      } catch (GeneralSecurityException e) {
+        e.printStackTrace();
+      } catch (IOException e) {
+        e.printStackTrace();
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+    });
+
+
   }
 
   public static void sendCommand(String deviceId, String data) throws IOException {

@@ -73,7 +73,7 @@ public class WeatherUpdater {
 
     PredictionOverview.Label predictedLabel = Predictor.predict(room, weatherForecast);
 
-    if (predictedLabel == PredictionOverview.Label.NEGATIVE) {
+    if (predictedLabel == PredictionOverview.Label.POSITIVE) {
       if (room.getMinPower() != null) {
         room.getDigitalOutput().updatePower(room.getMinPower() / 2);
       } else {
@@ -99,14 +99,16 @@ public class WeatherUpdater {
     // Calculate from weather and set value
     double power = calculateFromWeatherForecast(weatherForecast, room);
     double minimumPowerForRoom = room.getMinPower() != null ? room.getMinPower() : 0;
-    double adjusterForMinimum = Math.max(minimumPowerForRoom, power);
+    double tempAdjusted = power * room.getTempAdjustFactor();
 
-    double tempAdjusted = adjusterForMinimum * room.getTempAdjustFactor();
-    double adjustedForNight = adjustForNight(tempAdjusted);
+    // Always minimum
+    double adjusterForMinimum = Math.max(minimumPowerForRoom, tempAdjusted);
 
-    double halfPowerAsLowest = Math.max(minimumPowerForRoom * 0.5, adjustedForNight);
+    double adjustedForNight = adjustForNight(adjusterForMinimum);
 
-    room.getDigitalOutput().updatePower(halfPowerAsLowest);
+
+
+    room.getDigitalOutput().updatePower(adjustedForNight);
   }
 
   private static double calculateFromWeatherForecast(WeatherForecast weatherForecast, Room room) {
