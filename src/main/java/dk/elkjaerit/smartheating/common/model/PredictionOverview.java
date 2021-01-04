@@ -14,20 +14,6 @@ public class PredictionOverview {
   Label calculated;
   @Singular List<ResultRow> results;
 
-  public Label getResult() {
-    if (calculated == Label.POSITIVE) {
-      double negativeProhibition = results.stream()
-              .filter(resultRow -> resultRow.label == Label.POSITIVE)
-              .map(resultRow -> resultRow.prohibition)
-              .findFirst()
-              .orElseThrow(IllegalArgumentException::new);
-      if (negativeProhibition > 0.55) {
-        return Label.POSITIVE;
-      }
-    }
-    return Label.NEGATIVE;
-  }
-
   @Value
   @Builder
   public static class ResultRow {

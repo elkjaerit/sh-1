@@ -20,6 +20,7 @@ public class Room {
   private Boolean night;
   private Sensor sensor;
   private DigitalOutput digitalOutput;
+  private MachineLearning ml;
 
   public DigitalOutput getDigitalOutput() {
     if (this.digitalOutput == null) {

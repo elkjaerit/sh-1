@@ -1,6 +1,7 @@
 package dk.elkjaerit.smartheating.ml;
 
 import com.google.cloud.bigquery.*;
+import dk.elkjaerit.smartheating.ProjectInfo;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview;
 import dk.elkjaerit.smartheating.common.model.PredictionOverview.Label;
 import dk.elkjaerit.smartheating.common.model.Room;
@@ -21,24 +22,25 @@ public class Predictor {
 
   public static Label predict(Room room, WeatherForecast weatherForecast) {
     try {
+      if (room.getMl() == null || room.getMl().getThreshold() == null && room.getMl() == null) {
+        return Label.NEGATIVE;
+      }
+
       String query = buildQuery(room, weatherForecast);
       QueryJobConfiguration queryConfig =
-          QueryJobConfiguration.newBuilder(query)
-              .setUseLegacySql(false)
-              .build();
+          QueryJobConfiguration.newBuilder(query).setUseLegacySql(false).build();
       JobId jobId = JobId.of(UUID.randomUUID().toString());
-
       Job job = bigquery.create(JobInfo.newBuilder(queryConfig).setJobId(jobId).build());
       job.waitFor();
 
       PredictionOverview build = createResult(job);
       LOG.info("" + build);
-      Label result = build.getResult();
+      Label result = build.getCalculated();
       LOG.info("Prediction for '" + room.getName() + "': " + result);
       return result;
     } catch (Exception e) {
       LOG.log(Level.SEVERE, "Could not make prediction for room " + room.getName());
-      return Label.POSITIVE;
+      return Label.NEGATIVE;
     }
   }
 
@@ -68,17 +70,17 @@ public class Predictor {
         .build();
   }
 
-  private static String buildQuery(Room room, WeatherForecast weatherForecast)
-      throws IOException {
+  private static String buildQuery(Room room, WeatherForecast weatherForecast) throws IOException {
     String fileContent =
         IOUtils.toString(
             Predictor.class.getClassLoader().getResourceAsStream("predict.sql"),
             StandardCharsets.UTF_8);
     return String.format(
         fileContent,
-        "smart-heating-1.sensors." + room.getName(),
+        ProjectInfo.PROJECT_ID + "." + ProjectInfo.BIG_QUERY_DATASET_NAME + "." + room.getName(),
         (int) weatherForecast.getCloudCover(),
         (int) weatherForecast.getAzimuth(),
-        (int) weatherForecast.getZenith());
+        (int) weatherForecast.getZenith(),
+        room.getMl().getThreshold());
   }
 }

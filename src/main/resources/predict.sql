@@ -6,4 +6,5 @@ FROM
     SELECT
       %s as cloudBucket, %s as azimuth_bucket, %s as zenith_bucket
     )
+    , STRUCT(%s AS threshold)
   )

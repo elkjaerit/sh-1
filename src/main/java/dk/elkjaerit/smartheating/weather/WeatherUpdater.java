@@ -66,8 +66,7 @@ public class WeatherUpdater {
     }
   }
 
-  private static void updateRoom(
-      QueryDocumentSnapshot roomQueryDocumentSnapshot, WeatherForecast weatherForecast) {
+  private static void updateRoom(QueryDocumentSnapshot roomQueryDocumentSnapshot, WeatherForecast weatherForecast) {
 
     Room room = roomQueryDocumentSnapshot.toObject(Room.class);
 
@@ -89,7 +88,7 @@ public class WeatherUpdater {
             + "': "
             + room.getDigitalOutput().getPower()
             + ". Current temp: "
-            + (room.getSensor() !=null  ? room.getSensor().getTemperature() : "N/A"));
+            + (room.getSensor() != null ? room.getSensor().getTemperature() : "N/A"));
     roomQueryDocumentSnapshot
         .getReference()
         .update(Map.of("digitalOutput", room.getDigitalOutput()));
@@ -105,8 +104,6 @@ public class WeatherUpdater {
     double adjusterForMinimum = Math.max(minimumPowerForRoom, tempAdjusted);
 
     double adjustedForNight = adjustForNight(adjusterForMinimum);
-
-
 
     room.getDigitalOutput().updatePower(adjustedForNight);
   }
